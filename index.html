@@ -170,12 +170,14 @@
   .card .stripe{ width:3px; border-radius:3px; flex-shrink:0; }
   .card.fuel .stripe{ background:var(--fuel); }
   .card.maintenance .stripe{ background:var(--maint); }
+  .card.cost .stripe{ background:var(--warn); }
   .card .body{ flex:1; min-width:0; display:flex; flex-direction:column; gap:4px; }
   .card .row1{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
   .card .date{ font-size:12px; color:var(--ink-muted); font-weight:500; }
   .card .kind{ font-size:10px; font-weight:700; padding:2px 7px; border-radius:999px; letter-spacing:.02em; }
   .card.fuel .kind{ background:var(--fuel-soft); color:var(--fuel); }
   .card.maintenance .kind{ background:var(--maint-soft); color:var(--maint); }
+  .card.cost .kind{ background:var(--warn-soft); color:var(--warn); }
   .card .main{ font-size:14px; font-weight:700; }
   .card .meta{ font-size:11.5px; color:var(--ink-muted); display:flex; flex-wrap:wrap; gap:x 8px; gap:2px 10px; }
   .card .eff{ font-size:11px; font-weight:700; padding:2px 8px; border-radius:999px; white-space:nowrap; align-self:flex-start; }
@@ -218,18 +220,23 @@
   .sheet h2{ font-size:16px; font-weight:700; margin-bottom:14px; }
   .type-toggle{ display:flex; gap:8px; margin-bottom:14px; }
   .type-toggle button{
-    flex:1; padding:10px; border-radius:10px; border:1px solid var(--border);
+    flex:1; padding:10px 4px; border-radius:10px; border:1px solid var(--border);
     background:var(--surface-2); color:var(--ink-muted); font-weight:700; font-size:13px; cursor:pointer;
   }
   .type-toggle button[aria-pressed="true"].t-fuel{ background:var(--fuel-soft); color:var(--fuel); border-color:var(--fuel); }
   .type-toggle button[aria-pressed="true"].t-maint{ background:var(--maint-soft); color:var(--maint); border-color:var(--maint); }
+  .type-toggle button[aria-pressed="true"].t-cost{ background:var(--warn-soft); color:var(--warn); border-color:var(--warn); }
   .field{ display:flex; flex-direction:column; gap:5px; margin-bottom:12px; }
   .field label{ font-size:12px; font-weight:500; color:var(--ink-muted); }
   .field input, .field textarea{
     font-family:inherit; font-size:15px; padding:10px 11px; border-radius:10px;
     border:1px solid var(--border); background:var(--bg); color:var(--ink); width:100%;
   }
-  .field input:focus, .field textarea:focus{ outline:2px solid var(--accent); outline-offset:1px; }
+  .field select{
+    font-family:inherit; font-size:15px; padding:10px 11px; border-radius:10px;
+    border:1px solid var(--border); background:var(--bg); color:var(--ink); width:100%;
+  }
+  .field input:focus, .field textarea:focus, .field select:focus{ outline:2px solid var(--accent); outline-offset:1px; }
   .field .computed{ font-size:11px; color:var(--ink-faint); }
   .two-col{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
   .sheet-actions{ display:flex; gap:10px; margin-top:6px; }
@@ -238,6 +245,30 @@
   .btn.danger{ background:transparent; color:var(--warn); border-color:var(--warn); flex:0 0 auto; }
   .btn.danger.confirm{ background:var(--warn); color:var(--accent-ink); }
   .hint{ font-size:11.5px; color:var(--ink-faint); margin-top:-2px; margin-bottom:14px; }
+
+
+  /* 費用パネル */
+  .costpanel{ background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:14px; box-shadow:var(--shadow); }
+  .costpanel .ch{ display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+  .costpanel h2{ font-size:13.5px; font-weight:700; }
+  .costpanel .seg{ display:flex; gap:4px; }
+  .costpanel .seg button{ border:1px solid var(--border); background:var(--surface); color:var(--ink-muted); font-size:11.5px; font-weight:500; padding:4px 10px; border-radius:999px; cursor:pointer; }
+  .costpanel .seg button[aria-pressed="true"]{ background:var(--ink); color:var(--bg); border-color:var(--ink); }
+  .costpanel .total{ font-size:24px; font-weight:700; line-height:1.1; }
+  .costpanel .totalsub{ font-size:11px; color:var(--ink-muted); margin:2px 0 10px; }
+  .costrow{ display:grid; grid-template-columns:84px 1fr auto; gap:8px; align-items:center; padding:3px 0; font-size:12px; }
+  .costrow .nm{ color:var(--ink-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .costrow .bar{ height:7px; border-radius:4px; background:var(--surface-2); overflow:hidden; }
+  .costrow .bar i{ display:block; height:100%; background:var(--accent); border-radius:4px; }
+  .costrow .am{ font-weight:700; text-align:right; }
+  .cost-empty{ font-size:12.5px; color:var(--ink-muted); padding:6px 0 4px; }
+  /* 内訳の行 */
+  .itemrow{ display:grid; grid-template-columns:1fr 84px auto; gap:6px; margin-bottom:6px; align-items:center; }
+  .itemrow input, .itemrow select{ min-width:0; font-family:inherit; font-size:14px; padding:8px 9px; border-radius:9px; border:1px solid var(--border); background:var(--bg); color:var(--ink); width:100%; }
+  .itemrow .grp{ grid-column:1 / 3; }
+  .itemrow .del{ border:none; background:transparent; color:var(--ink-faint); font-size:20px; line-height:1; cursor:pointer; padding:4px 8px; }
+  .itemrow + .itemrow{ margin-top:2px; padding-top:6px; border-top:1px dashed var(--border); }
+  .btn-add{ border:1px dashed var(--border); background:transparent; color:var(--ink-muted); font-size:13px; padding:8px; border-radius:10px; cursor:pointer; width:100%; margin-bottom:8px; }
 
   :focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
   @media (prefers-reduced-motion: reduce){ *{ transition:none !important; animation:none !important; } }
@@ -259,25 +290,24 @@
 <header class="top">
   <div class="brand">
     <h1>Pit Log</h1>
-    <div class="sub">給油・整備の記録</div>
   </div>
   <div class="right">
     <div class="today mono" id="todayLabel"></div>
-    <button class="icon-btn" id="fabSettings" type="button" aria-label="バックアップと設定">⚙</button>
+    <button class="icon-btn" id="fabSettings" type="button" aria-label="バックアップと設定"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" d="M19.39 10.23 L22.12 10.72 L22.12 13.28 L19.39 13.77 L18.48 15.97 L20.06 18.25 L18.25 20.06 L15.97 18.48 L13.77 19.39 L13.28 22.12 L10.72 22.12 L10.23 19.39 L8.03 18.48 L5.75 20.06 L3.94 18.25 L5.52 15.97 L4.61 13.77 L1.88 13.28 L1.88 10.72 L4.61 10.23 L5.52 8.03 L3.94 5.75 L5.75 3.94 L8.03 5.52 L10.23 4.61 L10.72 1.88 L13.28 1.88 L13.77 4.61 L15.97 5.52 L18.25 3.94 L20.06 5.75 L18.48 8.03 Z M12 8.6a3.4 3.4 0 1 0 0 6.8a3.4 3.4 0 1 0 0-6.8Z"/></svg></button>
   </div>
 </header>
 
 <main>
   <section class="stats" aria-label="サマリー">
     <div class="tile">
-      <div class="label">平均燃費</div>
-      <div class="value mono" id="statAvg">—<span class="unit">km/L</span></div>
-      <div class="delta" id="statAvgDelta"></div>
-    </div>
-    <div class="tile">
-      <div class="label">直近の燃費</div>
+      <div class="label">最新燃費</div>
       <div class="value mono" id="statLatest">—<span class="unit">km/L</span></div>
       <div class="delta" id="statLatestDelta"></div>
+    </div>
+    <div class="tile">
+      <div class="label">通算燃費</div>
+      <div class="value mono" id="statAvg">—<span class="unit">km/L</span></div>
+      <div class="delta" id="statAvgDelta"></div>
     </div>
     <div class="tile">
       <div class="label">総走行距離</div>
@@ -286,14 +316,17 @@
     </div>
   </section>
 
-  <section class="panel" aria-label="燃費の推移">
-    <div class="panel-head">
-      <h2>燃費の推移</h2>
-      <div class="avg" id="chartRange"></div>
+  <section class="costpanel" id="costPanel" aria-label="費用">
+    <div class="ch">
+      <h2>かかった費用</h2>
+      <div class="seg" role="group" aria-label="期間">
+        <button type="button" data-range="year" aria-pressed="true">今年</button>
+        <button type="button" data-range="all" aria-pressed="false">全期間</button>
+      </div>
     </div>
-    <div class="chart-wrap" id="chartWrap">
-      <div class="chart-empty" id="chartEmpty">給油量を記録すると、燃費の推移が表示されます</div>
-    </div>
+    <div class="total mono" id="costTotal">—</div>
+    <div class="totalsub" id="costSub"></div>
+    <div id="costRows"></div>
   </section>
 
   <section class="log">
@@ -303,6 +336,7 @@
         <button class="chip" data-filter="all" aria-pressed="true">すべて</button>
         <button class="chip" data-filter="fuel" aria-pressed="false">給油</button>
         <button class="chip" data-filter="maintenance" aria-pressed="false">整備</button>
+        <button class="chip" data-filter="cost" aria-pressed="false">費用</button>
       </div>
     </div>
     <div id="logList"></div>
@@ -331,7 +365,8 @@
     <h2 id="sheetTitle">記録を追加</h2>
     <div class="type-toggle">
       <button type="button" class="t-fuel" data-type="fuel" aria-pressed="true">⛽ 給油</button>
-      <button type="button" class="t-maint" data-type="maintenance" aria-pressed="false">🔧 整備</button>
+      <button type="button" class="t-maint" data-type="maintenance" aria-pressed="false">🔧 整備・車検</button>
+      <button type="button" class="t-cost" data-type="cost" aria-pressed="false">💴 その他の費用</button>
     </div>
     <form id="entryForm">
       <div class="field">
@@ -342,6 +377,30 @@
       <div class="field" id="field-distance">
         <label for="f-distance">走行距離(前回給油から)</label>
         <input type="number" id="f-distance" inputmode="numeric" min="0" step="1" placeholder="例: 480">
+      </div>
+
+      <div id="costFields" hidden>
+        <div class="field">
+          <label for="f-category">費用の種類</label>
+          <select id="f-category"></select>
+        </div>
+        <div class="field">
+          <label for="f-cost-amount">金額(円)</label>
+          <input type="number" id="f-cost-amount" inputmode="numeric" min="0" step="1" placeholder="例: 8000">
+        </div>
+      </div>
+
+      <div id="maintFields" hidden>
+        <div class="field" style="margin-bottom:6px">
+          <label>内訳(任意)・請求書の行をそのまま入れられます</label>
+        </div>
+        <div id="itemsWrap"></div>
+        <button type="button" class="btn-add" id="btnAddItem">+ 行を追加</button>
+        <div class="field">
+          <label for="f-maint-amount">合計金額(円)</label>
+          <input type="number" id="f-maint-amount" inputmode="numeric" min="0" step="1" placeholder="内訳がなければ合計だけでも可">
+          <div class="computed" id="maintComputed"></div>
+        </div>
       </div>
 
       <div id="fuelFields">
@@ -387,6 +446,8 @@
   "use strict";
 
   var STORE_KEY = 'pitlog.v1';
+  var COST_CATEGORIES = ['駐車場','ローン','保険','税金','高速・ETC','洗車・用品','その他'];
+  var GROUPS = { work:'整備費', legal:'法定費用' };
   var INITIAL_ENTRIES = [
   {
     "amount": null,
@@ -539,6 +600,18 @@
     ampComputed: document.getElementById('ampComputed'),
     fEffPreview: document.getElementById('f-eff-preview'),
     fNote: document.getElementById('f-note'),
+    costFields: document.getElementById('costFields'),
+    fCategory: document.getElementById('f-category'),
+    fCostAmount: document.getElementById('f-cost-amount'),
+    maintFields: document.getElementById('maintFields'),
+    itemsWrap: document.getElementById('itemsWrap'),
+    btnAddItem: document.getElementById('btnAddItem'),
+    fMaintAmount: document.getElementById('f-maint-amount'),
+    maintComputed: document.getElementById('maintComputed'),
+    costTotal: document.getElementById('costTotal'),
+    costSub: document.getElementById('costSub'),
+    costRows: document.getElementById('costRows'),
+    costRangeBtns: Array.prototype.slice.call(document.querySelectorAll('#costPanel .seg button')),
     noteLabel: document.getElementById('noteLabel'),
     btnDelete: document.getElementById('btnDelete'),
     btnCancel: document.getElementById('btnCancel'),
@@ -565,6 +638,7 @@
     filter: 'all',
     editingId: null,
     currentType: 'fuel',
+    costRange: 'year',
     deleteArmed: false
   };
 
@@ -599,6 +673,7 @@
   function render(){
     var entries = state.entries.slice().sort(function(a,b){ return a.date < b.date ? 1 : (a.date > b.date ? -1 : 0); });
     renderStats(entries);
+    renderCosts(entries);
     renderChart(entries);
     renderLog(entries);
   }
@@ -612,13 +687,14 @@
     var fuelCount = entries.filter(function(e){ return e.type==='fuel'; }).length;
 
     els.statAvg.innerHTML = (avg!==null ? num(avg,1) : '—') + '<span class="unit">km/L</span>';
-    els.statAvgDelta.textContent = fuelWithEff.length ? ('記録 ' + fuelWithEff.length + '件') : '';
+    var startDate = fuelWithEff.length ? fuelWithEff.map(function(e){ return e.date; }).sort()[0] : null;
+    els.statAvgDelta.textContent = startDate ? (startDate.slice(0,4) + '/' + parseInt(startDate.slice(5,7),10) + '/' + parseInt(startDate.slice(8,10),10) + '-') : '';
 
     els.statLatest.innerHTML = (latestEff!==null ? num(latestEff,1) : '—') + '<span class="unit">km/L</span>';
     if (latestEff!==null && avg!==null && fuelWithEff.length>1){
       var diff = latestEff - avg;
       var pct = avg ? (diff/avg*100) : 0;
-      els.statLatestDelta.textContent = (diff>=0?'平均+':'平均') + pct.toFixed(0) + '%';
+      els.statLatestDelta.textContent = (diff>=0?'通算+':'通算') + pct.toFixed(0) + '%';
       els.statLatestDelta.className = 'delta ' + (diff>=0?'up':'down');
     } else {
       els.statLatestDelta.textContent = latestFuel ? fmtDateShort(latestFuel.date) : '';
@@ -629,7 +705,74 @@
     els.statCount.textContent = '給油 ' + fuelCount + '回';
   }
 
+
+  /* ---------- 費用の集計 ---------- */
+
+  function amountOf(e){
+    return (typeof e.amount === 'number' && isFinite(e.amount)) ? e.amount : 0;
+  }
+  function costLabel(e){
+    if (e.type === 'fuel') return '給油';
+    if (e.type === 'maintenance') return '整備・車検';
+    return e.category || 'その他';
+  }
+
+  function renderCosts(entries){
+    var year = todayISO.slice(0,4);
+    var list = entries.filter(function(e){
+      return amountOf(e) > 0 && (state.costRange === 'all' || (e.date || '').slice(0,4) === year);
+    });
+    var total = list.reduce(function(s,e){ return s + amountOf(e); }, 0);
+    var by = {};
+    list.forEach(function(e){ var k = costLabel(e); by[k] = (by[k] || 0) + amountOf(e); });
+    var keys = Object.keys(by).sort(function(a,b){ return by[b] - by[a]; });
+
+    els.costRangeBtns.forEach(function(b){ b.setAttribute('aria-pressed', b.dataset.range === state.costRange ? 'true' : 'false'); });
+    els.costTotal.textContent = total > 0 ? yen(total) : '—';
+
+    // 期間の説明(月あたり)
+    var sub = '';
+    if (total > 0){
+      var months;
+      if (state.costRange === 'year'){
+        months = Math.max(1, parseInt(todayISO.slice(5,7), 10));
+        sub = year + '年 · 月あたり ' + yen(total / months);
+      } else {
+        var first = list.map(function(e){ return e.date; }).sort()[0];
+        var fy = parseInt(first.slice(0,4),10), fm = parseInt(first.slice(5,7),10);
+        var ty = parseInt(todayISO.slice(0,4),10), tm = parseInt(todayISO.slice(5,7),10);
+        months = Math.max(1, (ty - fy) * 12 + (tm - fm) + 1);
+        sub = first.slice(0,4) + '/' + fm + '〜 · 月あたり ' + yen(total / months);
+      }
+    }
+    els.costSub.textContent = sub;
+
+    els.costRows.innerHTML = '';
+    if (!keys.length){
+      var empty = document.createElement('div'); empty.className = 'cost-empty';
+      empty.textContent = '金額のある記録がまだありません';
+      els.costRows.appendChild(empty);
+      return;
+    }
+    var max = by[keys[0]];
+    keys.forEach(function(k){
+      var row = document.createElement('div'); row.className = 'costrow';
+      var nm = document.createElement('div'); nm.className = 'nm'; nm.textContent = k;
+      var bar = document.createElement('div'); bar.className = 'bar';
+      var fill = document.createElement('i'); fill.style.width = Math.max(3, by[k] / max * 100) + '%';
+      bar.appendChild(fill);
+      var am = document.createElement('div'); am.className = 'am mono'; am.textContent = yen(by[k]);
+      row.appendChild(nm); row.appendChild(bar); row.appendChild(am);
+      els.costRows.appendChild(row);
+    });
+  }
+
+  els.costRangeBtns.forEach(function(b){
+    b.addEventListener('click', function(){ state.costRange = b.dataset.range; render(); });
+  });
+
   function renderChart(entries){
+    if (!els.chartWrap) return;   // 燃費の推移パネルは非表示
     var pts = entries.filter(function(e){ return e.type==='fuel' && computeEfficiency(e)!==null; })
       .slice().sort(function(a,b){ return a.date < b.date ? -1 : 1; })
       .slice(-14);
@@ -742,7 +885,7 @@
 
       var row1 = document.createElement('div'); row1.className='row1';
       var date = document.createElement('div'); date.className='date mono'; date.textContent = fmtDateLong(e.date);
-      var kind = document.createElement('div'); kind.className='kind'; kind.textContent = e.type==='fuel' ? '給油' : '整備';
+      var kind = document.createElement('div'); kind.className='kind'; kind.textContent = e.type==='fuel' ? '給油' : (e.type==='cost' ? (e.category || '費用') : '整備');
       row1.appendChild(date); row1.appendChild(kind);
       body.appendChild(row1);
 
@@ -772,11 +915,28 @@
           effPill.textContent = eff.toFixed(1) + ' km/L';
           body.appendChild(effPill);
         }
+      } else if (e.type === 'cost'){
+        var cmain = document.createElement('div'); cmain.className='main mono';
+        cmain.textContent = (typeof e.amount === 'number') ? yen(e.amount) : '金額未記録';
+        body.appendChild(cmain);
+        if (e.note){
+          var cmeta = document.createElement('div'); cmeta.className='meta'; cmeta.textContent = e.note;
+          body.appendChild(cmeta);
+        }
       } else {
         var mmain = document.createElement('div'); mmain.className='main'; mmain.textContent = e.note || '整備記録';
         body.appendChild(mmain);
-        if (typeof e.distanceKm === 'number'){
-          var mmeta = document.createElement('div'); mmeta.className='meta mono'; mmeta.textContent = num(e.distanceKm,0) + ' km 時点';
+        var mparts = [];
+        if (typeof e.amount === 'number') mparts.push(yen(e.amount));
+        if (Array.isArray(e.items) && e.items.length){
+          var sums = {};
+          e.items.forEach(function(it){ var g = it.group === 'legal' ? 'legal' : 'work'; sums[g] = (sums[g]||0) + (typeof it.amount==='number' ? it.amount : 0); });
+          if (sums.legal) mparts.push('法定 ' + yen(sums.legal));
+          if (sums.work) mparts.push('整備 ' + yen(sums.work));
+        }
+        if (typeof e.distanceKm === 'number') mparts.push(num(e.distanceKm,0) + ' km 時点');
+        if (mparts.length){
+          var mmeta = document.createElement('div'); mmeta.className='meta mono'; mmeta.textContent = mparts.join('  ·  ');
           body.appendChild(mmeta);
         }
       }
@@ -793,10 +953,14 @@
     state.currentType = t;
     els.typeBtns.forEach(function(b){ b.setAttribute('aria-pressed', b.dataset.type===t ? 'true':'false'); });
     els.fuelFields.hidden = (t !== 'fuel');
+    els.maintFields.hidden = (t !== 'maintenance');
+    els.costFields.hidden = (t !== 'cost');
+    els.fieldDistance.hidden = (t === 'cost');
     els.fieldDistance.querySelector('label').textContent = t==='fuel' ? '走行距離(前回給油から)' : '走行距離(任意)';
-    els.noteLabel.textContent = t==='fuel' ? 'メモ(任意)' : '内容';
+    els.noteLabel.textContent = t==='maintenance' ? '内容(件名)' : 'メモ(任意)';
     els.fNote.required = (t === 'maintenance');
-    els.fNote.placeholder = t==='fuel' ? '任意' : '例: オイル交換・車検';
+    els.fNote.placeholder = t==='maintenance' ? '例: 車検、オイル交換' : '任意';
+    els.fCostAmount.required = (t === 'cost');
   }
 
   els.typeBtns.forEach(function(b){
@@ -827,11 +991,74 @@
   els.fPrice.addEventListener('input', recalcAmount);
   els.fDistance.addEventListener('input', recalcEffPreview);
 
+
+  /* ---------- 内訳の行 ---------- */
+
+  COST_CATEGORIES.forEach(function(c){
+    var o = document.createElement('option'); o.value = c; o.textContent = c; els.fCategory.appendChild(o);
+  });
+
+  function addItemRow(item){
+    item = item || {};
+    var row = document.createElement('div'); row.className = 'itemrow';
+    var label = document.createElement('input'); label.type = 'text'; label.placeholder = '項目(例: 自賠責保険料)'; label.className = 'it-label';
+    label.value = item.label || '';
+    var amt = document.createElement('input'); amt.type = 'number'; amt.inputMode = 'numeric'; amt.min = '0'; amt.step = '1'; amt.placeholder = '金額'; amt.className = 'it-amount';
+    amt.value = (typeof item.amount === 'number') ? item.amount : '';
+    var del = document.createElement('button'); del.type = 'button'; del.className = 'del'; del.setAttribute('aria-label','この行を削除'); del.textContent = '×';
+    var grp = document.createElement('select'); grp.className = 'grp it-group';
+    Object.keys(GROUPS).forEach(function(k){ var o = document.createElement('option'); o.value = k; o.textContent = GROUPS[k]; grp.appendChild(o); });
+    grp.value = item.group === 'legal' ? 'legal' : 'work';
+    row.appendChild(label); row.appendChild(amt); row.appendChild(del); row.appendChild(grp);
+    amt.addEventListener('input', updateMaintTotal);
+    del.addEventListener('click', function(){ row.remove(); updateMaintTotal(); });
+    els.itemsWrap.appendChild(row);
+  }
+
+  function readItems(){
+    var out = [];
+    Array.prototype.forEach.call(els.itemsWrap.querySelectorAll('.itemrow'), function(row){
+      var label = row.querySelector('.it-label').value.trim();
+      var a = row.querySelector('.it-amount').value;
+      var amount = a !== '' ? parseFloat(a) : null;
+      if (typeof amount !== 'number' || isNaN(amount)) amount = null;
+      if (!label && amount === null) return;
+      out.push({ label: label, amount: amount, group: row.querySelector('.it-group').value === 'legal' ? 'legal' : 'work' });
+    });
+    return out;
+  }
+
+  function updateMaintTotal(){
+    var items = readItems();
+    var hasAmount = items.some(function(i){ return i.amount !== null; });
+    if (hasAmount){
+      var sum = items.reduce(function(s,i){ return s + (i.amount || 0); }, 0);
+      els.fMaintAmount.value = sum;
+      els.fMaintAmount.readOnly = true;
+      els.maintComputed.textContent = '内訳の合計から自動計算';
+    } else {
+      els.fMaintAmount.readOnly = false;
+      els.maintComputed.textContent = '';
+    }
+  }
+
+  els.btnAddItem.addEventListener('click', function(){ addItemRow(); });
+
+  function resetItems(){
+    els.itemsWrap.innerHTML = '';
+    els.fMaintAmount.value = '';
+    els.fMaintAmount.readOnly = false;
+    els.maintComputed.textContent = '';
+    els.fCostAmount.value = '';
+    els.fCategory.value = COST_CATEGORIES[0];
+  }
+
   function openAdd(){
     state.editingId = null;
     state.deleteArmed = false;
     els.sheetTitle.textContent = '記録を追加';
     els.form.reset();
+    resetItems();
     els.fDate.value = todayISO;
     els.btnDelete.hidden = true;
     resetDeleteBtn();
@@ -852,6 +1079,21 @@
     els.fPrice.value = (typeof e.unitPrice==='number') ? e.unitPrice : '';
     els.fAmount.value = (typeof e.amount==='number') ? e.amount : '';
     els.fNote.value = e.note || '';
+    resetItems();
+    if (e.type === 'maintenance'){
+      (Array.isArray(e.items) ? e.items : []).forEach(addItemRow);
+      els.fMaintAmount.value = (typeof e.amount==='number') ? e.amount : '';
+      updateMaintTotal();
+      if (!(Array.isArray(e.items) && e.items.some(function(i){ return typeof i.amount==='number'; }))){
+        els.fMaintAmount.value = (typeof e.amount==='number') ? e.amount : '';
+      }
+    } else if (e.type === 'cost'){
+      if (COST_CATEGORIES.indexOf(e.category) < 0 && e.category){
+        var o = document.createElement('option'); o.value = e.category; o.textContent = e.category; els.fCategory.appendChild(o);
+      }
+      els.fCategory.value = e.category || COST_CATEGORIES[0];
+      els.fCostAmount.value = (typeof e.amount==='number') ? e.amount : '';
+    }
     recalcEffPreview();
     els.btnDelete.hidden = false;
     resetDeleteBtn();
@@ -918,8 +1160,20 @@
       data.liters = (typeof liters==='number' && !isNaN(liters)) ? liters : null;
       data.unitPrice = (typeof price==='number' && !isNaN(price)) ? price : null;
       data.amount = (typeof amount==='number' && !isNaN(amount)) ? amount : null;
+    } else if (type === 'maintenance'){
+      var items = readItems();
+      var sum = null;
+      if (items.some(function(i){ return i.amount !== null; })) sum = items.reduce(function(s,i){ return s + (i.amount || 0); }, 0);
+      var direct = els.fMaintAmount.value !== '' ? parseFloat(els.fMaintAmount.value) : null;
+      data.liters = null; data.unitPrice = null;
+      data.amount = (sum !== null) ? sum : ((typeof direct==='number' && !isNaN(direct)) ? direct : null);
+      data.items = items;
     } else {
-      data.liters = null; data.unitPrice = null; data.amount = null;
+      var camount = els.fCostAmount.value !== '' ? parseFloat(els.fCostAmount.value) : null;
+      data.liters = null; data.unitPrice = null;
+      data.amount = (typeof camount==='number' && !isNaN(camount)) ? camount : null;
+      data.category = els.fCategory.value;
+      data.distanceKm = null;
     }
 
     saveEntry(state.editingId, data);
@@ -1034,13 +1288,17 @@
       var added = 0, updated = 0, skipped = 0;
       list.forEach(function(raw){
         if (!raw || typeof raw !== 'object' || !/^\d{4}-\d{2}-\d{2}$/.test(raw.date || '')){ skipped++; return; }
-        var type = raw.type === 'maintenance' ? 'maintenance' : 'fuel';
+        var type = (raw.type === 'maintenance' || raw.type === 'cost') ? raw.type : 'fuel';
         var rec = {
           id: (typeof raw.id === 'string' && raw.id) ? raw.id : newId(),
           type: type, date: raw.date,
           distanceKm: cleanNum(raw.distanceKm),
           liters: cleanNum(raw.liters), unitPrice: cleanNum(raw.unitPrice), amount: cleanNum(raw.amount),
           note: typeof raw.note === 'string' ? raw.note : '',
+          category: (type === 'cost' && typeof raw.category === 'string') ? raw.category : undefined,
+          items: (type === 'maintenance' && Array.isArray(raw.items)) ? raw.items.filter(function(i){ return i && typeof i === 'object'; }).map(function(i){
+            return { label: typeof i.label === 'string' ? i.label : '', amount: cleanNum(i.amount), group: i.group === 'legal' ? 'legal' : 'work' };
+          }) : undefined,
           source: typeof raw.source === 'string' ? raw.source : 'import',
           updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : new Date().toISOString()
         };
