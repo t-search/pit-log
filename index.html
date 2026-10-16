@@ -218,6 +218,11 @@
     max-height:88vh; overflow-y:auto; box-shadow:0 -8px 30px rgba(0,0,0,.25);
   }
   .sheet h2{ font-size:16px; font-weight:700; margin-bottom:14px; }
+  .scan-btn{ width:100%; padding:12px; border-radius:11px; border:1px dashed var(--accent); background:var(--surface-2); color:var(--accent); font-weight:700; font-size:14px; cursor:pointer; margin-bottom:6px; }
+  .scan-btn:disabled{ opacity:.6; cursor:default; }
+  .scan-msg{ font-size:12.5px; color:var(--good); min-height:1.2em; margin:0 0 10px; }
+  .scan-msg.err{ color:var(--warn); }
+  .scan-wrap[hidden]{ display:none; }
   .type-toggle{ display:flex; gap:8px; margin-bottom:14px; }
   .type-toggle button{
     flex:1; padding:10px 4px; border-radius:10px; border:1px solid var(--border);
@@ -363,6 +368,11 @@
 <div class="overlay" id="overlay" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
     <h2 id="sheetTitle">記録を追加</h2>
+    <div class="scan-wrap" id="scanWrap">
+      <button type="button" class="scan-btn" id="btnScan">📷 写真から入力(レシート・請求書)</button>
+      <div class="scan-msg" id="scanMsg" role="status"></div>
+      <input type="file" id="scanInput" accept="image/*" hidden>
+    </div>
     <div class="type-toggle">
       <button type="button" class="t-fuel" data-type="fuel" aria-pressed="true">⛽ 給油</button>
       <button type="button" class="t-maint" data-type="maintenance" aria-pressed="false">🔧 整備・車検</button>
@@ -446,6 +456,8 @@
   "use strict";
 
   var STORE_KEY = 'pitlog.v1';
+  // 写真読み取り用 Cloudflare Worker の URL (設定するまで空 = 読み取りボタンは「準備中」表示)
+  var SCAN_URL = 'https://pit-log-scan.tsearch-office.workers.dev/';
   var COST_CATEGORIES = ['駐車場','ローン','保険','税金','高速・ETC','洗車・用品','その他'];
   var GROUPS = { work:'整備費', legal:'法定費用' };
   var INITIAL_ENTRIES = [
@@ -639,7 +651,8 @@
     editingId: null,
     currentType: 'fuel',
     costRange: 'year',
-    deleteArmed: false
+    deleteArmed: false,
+    scanned: false
   };
 
   function fmtDateLong(iso){
@@ -1057,6 +1070,8 @@
     state.editingId = null;
     state.deleteArmed = false;
     els.sheetTitle.textContent = '記録を追加';
+    state.scanned = false;
+    scanReset(true);
     els.form.reset();
     resetItems();
     els.fDate.value = todayISO;
@@ -1072,6 +1087,8 @@
     state.editingId = e.id;
     state.deleteArmed = false;
     els.sheetTitle.textContent = '記録を編集';
+    state.scanned = false;
+    scanReset(false);
     setType(e.type);
     els.fDate.value = e.date || todayISO;
     els.fDistance.value = (typeof e.distanceKm==='number') ? e.distanceKm : '';
@@ -1108,6 +1125,124 @@
 
   function showSheet(){ els.overlay.hidden = false; }
   function hideSheet(){ els.overlay.hidden = true; state.editingId = null; }
+
+  /* ---------- 写真から入力 ---------- */
+
+  var scanWrap = document.getElementById('scanWrap');
+  var scanBtn = document.getElementById('btnScan');
+  var scanInput = document.getElementById('scanInput');
+  var scanMsg = document.getElementById('scanMsg');
+
+  function scanSay(text, isErr){
+    scanMsg.textContent = text || '';
+    scanMsg.className = 'scan-msg' + (isErr ? ' err' : '');
+  }
+  function scanReset(show){
+    scanWrap.hidden = !show;
+    scanSay('');
+    scanBtn.disabled = false;
+    scanBtn.textContent = '📷 写真から入力(レシート・請求書)';
+  }
+
+  // 写真を縮小して JPEG の base64 にする(通信量と読み取り料金を抑える)
+  function shrinkImage(file){
+    return new Promise(function(resolve, reject){
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onload = function(){
+        var max = 1800, w = img.naturalWidth, h = img.naturalHeight;
+        var k = Math.min(1, max / Math.max(w, h));
+        var cw = Math.round(w*k), ch = Math.round(h*k);
+        var cv = document.createElement('canvas'); cv.width = cw; cv.height = ch;
+        cv.getContext('2d').drawImage(img, 0, 0, cw, ch);
+        URL.revokeObjectURL(url);
+        var dataUrl = cv.toDataURL('image/jpeg', 0.85);
+        resolve(dataUrl.split(',')[1]);
+      };
+      img.onerror = function(){ URL.revokeObjectURL(url); reject(new Error('image')); };
+      img.src = url;
+    });
+  }
+
+  function numOrNull(v){ return (typeof v === 'number' && isFinite(v)) ? v : null; }
+
+  function applyScan(r){
+    var type = (r.type === 'maintenance' || r.type === 'cost') ? r.type : 'fuel';
+    resetItems();
+    setType(type);
+    if (typeof r.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.date)) els.fDate.value = r.date;
+    els.fNote.value = (typeof r.note === 'string') ? r.note : '';
+    if (type === 'fuel'){
+      var l = numOrNull(r.liters), p = numOrNull(r.unitPrice), a = numOrNull(r.amount);
+      els.fLiters.value = l !== null ? l : '';
+      els.fPrice.value = p !== null ? p : '';
+      els.fAmount.value = a !== null ? a : ((l !== null && p !== null) ? Math.round(l*p) : '');
+      els.ampComputed.textContent = '';
+      recalcEffPreview();
+    } else if (type === 'maintenance'){
+      var items = Array.isArray(r.items) ? r.items : [];
+      items.forEach(function(it){
+        if (!it) return;
+        addItemRow({ label: String(it.label || ''), amount: numOrNull(it.amount), group: it.group === 'legal' ? 'legal' : 'work' });
+      });
+      updateMaintTotal();
+      if (!items.some(function(it){ return it && numOrNull(it.amount) !== null; })){
+        var ma = numOrNull(r.amount);
+        els.fMaintAmount.value = ma !== null ? ma : '';
+      }
+    } else {
+      var cat = (COST_CATEGORIES.indexOf(r.category) >= 0) ? r.category : 'その他';
+      els.fCategory.value = cat;
+      var ca = numOrNull(r.amount);
+      els.fCostAmount.value = ca !== null ? ca : '';
+    }
+    state.scanned = true;
+  }
+
+  scanBtn.addEventListener('click', function(){
+    if (!SCAN_URL){ scanSay('写真読み取りは準備中です(設定がまだ終わっていません)。', true); return; }
+    scanInput.value = '';
+    scanInput.click();
+  });
+
+  scanInput.addEventListener('change', function(){
+    var file = scanInput.files && scanInput.files[0];
+    if (!file) return;
+    scanBtn.disabled = true;
+    scanBtn.textContent = '読み取り中…(数十秒かかることがあります)';
+    scanSay('');
+    var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    var timer = setTimeout(function(){ if (ctrl) ctrl.abort(); }, 90000);
+    shrinkImage(file).then(function(b64){
+      return fetch(SCAN_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: b64, mediaType: 'image/jpeg' }),
+        signal: ctrl ? ctrl.signal : undefined
+      });
+    }).then(function(res){
+      return res.json().catch(function(){ return {}; }).then(function(body){
+        if (!res.ok || !body || body.error){
+          var m = (body && body.message) ? body.message : ('読み取りに失敗しました(' + res.status + ')');
+          throw new Error(m);
+        }
+        return body;
+      });
+    }).then(function(r){
+      applyScan(r);
+      scanSay('読み取りました。内容を必ず確認してから保存してください。', false);
+    }).catch(function(err){
+      var m = (err && err.name === 'AbortError') ? '時間がかかりすぎました。もう一度試してください。'
+            : (err && err.message === 'image') ? '写真を開けませんでした。別の写真で試してください。'
+            : (err && err.message) ? err.message : '読み取りに失敗しました。';
+      if (err instanceof TypeError) m = '通信できませんでした。電波を確認してもう一度試してください。';
+      scanSay(m, true);
+    }).then(function(){
+      clearTimeout(timer);
+      scanBtn.disabled = false;
+      scanBtn.textContent = '📷 写真から入力(レシート・請求書)';
+    });
+  });
 
   els.fab.addEventListener('click', openAdd);
   els.btnCancel.addEventListener('click', hideSheet);
@@ -1150,7 +1285,7 @@
       date: date,
       distanceKm: (typeof distanceKm==='number' && !isNaN(distanceKm)) ? distanceKm : null,
       note: note,
-      source: 'manual',
+      source: (state.scanned && !state.editingId) ? 'receipt' : 'manual',
       updatedAt: new Date().toISOString()
     };
     if (type === 'fuel'){
