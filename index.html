@@ -228,6 +228,7 @@
     flex:1; padding:10px 4px; border-radius:10px; border:1px solid var(--border);
     background:var(--surface-2); color:var(--ink-muted); font-weight:700; font-size:13px; cursor:pointer;
   }
+  .type-toggle button[hidden]{ display:none; }
   .type-toggle button[aria-pressed="true"].t-fuel{ background:var(--fuel-soft); color:var(--fuel); border-color:var(--fuel); }
   .type-toggle button[aria-pressed="true"].t-maint{ background:var(--maint-soft); color:var(--maint); border-color:var(--maint); }
   .type-toggle button[aria-pressed="true"].t-cost{ background:var(--warn-soft); color:var(--warn); border-color:var(--warn); }
@@ -340,8 +341,7 @@
       <div class="chips" role="group" aria-label="絞り込み">
         <button class="chip" data-filter="all" aria-pressed="true">すべて</button>
         <button class="chip" data-filter="fuel" aria-pressed="false">給油</button>
-        <button class="chip" data-filter="maintenance" aria-pressed="false">整備</button>
-        <button class="chip" data-filter="cost" aria-pressed="false">費用</button>
+        <button class="chip" data-filter="cost" aria-pressed="false">その他</button>
       </div>
     </div>
     <div id="logList"></div>
@@ -375,13 +375,19 @@
     </div>
     <div class="type-toggle">
       <button type="button" class="t-fuel" data-type="fuel" aria-pressed="true">⛽ 給油</button>
-      <button type="button" class="t-maint" data-type="maintenance" aria-pressed="false">🔧 整備・車検</button>
-      <button type="button" class="t-cost" data-type="cost" aria-pressed="false">💴 その他の費用</button>
+      <button type="button" class="t-maint" id="btnTypeMaint" data-type="maintenance" aria-pressed="false" hidden>🔧 整備・車検</button>
+      <button type="button" class="t-cost" data-type="cost" aria-pressed="false">💴 その他の支出</button>
     </div>
     <form id="entryForm">
       <div class="field">
         <label for="f-date">日付</label>
         <input type="date" id="f-date" required>
+      </div>
+
+      <div class="field" id="field-odo">
+        <label for="f-odo">メーター(km)・いまの総走行距離</label>
+        <input type="number" id="f-odo" inputmode="numeric" min="0" step="1" placeholder="例: 36887">
+        <div class="computed" id="odoComputed"></div>
       </div>
 
       <div class="field" id="field-distance">
@@ -390,7 +396,7 @@
       </div>
 
       <div id="costFields" hidden>
-        <div class="field">
+        <div class="field" id="costCatField" hidden>
           <label for="f-category">費用の種類</label>
           <select id="f-category"></select>
         </div>
@@ -652,8 +658,13 @@
     currentType: 'fuel',
     costRange: 'year',
     deleteArmed: false,
-    scanned: false
+    scanned: false,
+    showCat: false
   };
+
+  var fOdo = document.getElementById('f-odo');
+  var fieldOdo = document.getElementById('field-odo');
+  var odoComputed = document.getElementById('odoComputed');
 
   function fmtDateLong(iso){
     var d = new Date(iso + 'T00:00:00');
@@ -696,7 +707,8 @@
     var avg = fuelWithEff.length ? fuelWithEff.reduce(function(s,e){ return s+computeEfficiency(e); },0) / fuelWithEff.length : null;
     var latestFuel = entries.find(function(e){ return e.type==='fuel'; });
     var latestEff = latestFuel ? computeEfficiency(latestFuel) : null;
-    var totalDist = entries.reduce(function(s,e){ return s + (typeof e.distanceKm==='number' ? e.distanceKm : 0); },0);
+    var odoVals = entries.filter(function(e){ return e.type==='fuel' && typeof e.odometerKm==='number'; }).map(function(e){ return e.odometerKm; });
+    var maxOdo = odoVals.length ? Math.max.apply(null, odoVals) : null;
     var fuelCount = entries.filter(function(e){ return e.type==='fuel'; }).length;
 
     els.statAvg.innerHTML = (avg!==null ? num(avg,1) : '—') + '<span class="unit">km/L</span>';
@@ -714,7 +726,7 @@
       els.statLatestDelta.className = 'delta';
     }
 
-    els.statDistance.innerHTML = (totalDist>0 ? num(totalDist,0) : '—') + '<span class="unit">km</span>';
+    els.statDistance.innerHTML = (maxOdo!==null ? num(maxOdo,0) : '—') + '<span class="unit">km</span>';
     els.statCount.textContent = '給油 ' + fuelCount + '回';
   }
 
@@ -877,7 +889,7 @@
   }
 
   function renderLog(entries){
-    var filtered = state.filter==='all' ? entries : entries.filter(function(e){ return e.type===state.filter; });
+    var filtered = state.filter==='all' ? entries : entries.filter(function(e){ return state.filter==='fuel' ? e.type==='fuel' : e.type!=='fuel'; });
     els.logList.innerHTML = '';
     if (!filtered.length){
       var empty = document.createElement('div');
@@ -898,7 +910,7 @@
 
       var row1 = document.createElement('div'); row1.className='row1';
       var date = document.createElement('div'); date.className='date mono'; date.textContent = fmtDateLong(e.date);
-      var kind = document.createElement('div'); kind.className='kind'; kind.textContent = e.type==='fuel' ? '給油' : (e.type==='cost' ? (e.category || '費用') : '整備');
+      var kind = document.createElement('div'); kind.className='kind'; kind.textContent = e.type==='fuel' ? '給油' : (e.type==='cost' ? (e.category || 'その他') : '整備');
       row1.appendChild(date); row1.appendChild(kind);
       body.appendChild(row1);
 
@@ -911,6 +923,7 @@
         body.appendChild(main);
 
         var metaParts = [];
+        if (typeof e.odometerKm === 'number') metaParts.push('メーター ' + num(e.odometerKm,0) + ' km');
         if (typeof e.unitPrice === 'number') metaParts.push('@' + num(e.unitPrice,1) + '円');
         if (typeof e.amount === 'number') metaParts.push(yen(e.amount));
         if (e.note) metaParts.push(e.note);
@@ -969,16 +982,57 @@
     els.maintFields.hidden = (t !== 'maintenance');
     els.costFields.hidden = (t !== 'cost');
     els.fieldDistance.hidden = (t === 'cost');
+    fieldOdo.hidden = (t !== 'fuel');
     els.fieldDistance.querySelector('label').textContent = t==='fuel' ? '走行距離(前回給油から)' : '走行距離(任意)';
-    els.noteLabel.textContent = t==='maintenance' ? '内容(件名)' : 'メモ(任意)';
-    els.fNote.required = (t === 'maintenance');
-    els.fNote.placeholder = t==='maintenance' ? '例: 車検、オイル交換' : '任意';
+    els.noteLabel.textContent = t==='maintenance' ? '内容(件名)' : (t==='cost' ? '内容(メモ)' : 'メモ(任意)');
+    els.fNote.required = (t === 'maintenance' || t === 'cost');
+    els.fNote.placeholder = t==='maintenance' ? '例: 車検、オイル交換' : (t==='cost' ? '例: 車検、駐車場、保険' : '任意');
+    costCatField.hidden = !(t === 'cost' && state.showCat);
     els.fCostAmount.required = (t === 'cost');
   }
 
   els.typeBtns.forEach(function(b){
     b.addEventListener('click', function(){ setType(b.dataset.type); });
   });
+
+  /* ---------- メーターから走行距離を自動計算 ---------- */
+
+  function prevOdoEntry(dateStr, odo, excludeId){
+    var best = null;
+    state.entries.forEach(function(e){
+      if (e.type !== 'fuel' || typeof e.odometerKm !== 'number' || e.id === excludeId) return;
+      var before = e.date < dateStr || (e.date === dateStr && e.odometerKm < odo);
+      if (!before) return;
+      if (!best || e.date > best.date || (e.date === best.date && e.odometerKm > best.odometerKm)) best = e;
+    });
+    return best;
+  }
+
+  function refreshOdo(){
+    var odo = fOdo.value !== '' ? parseFloat(fOdo.value) : null;
+    var auto = false;
+    odoComputed.textContent = '';
+    if (state.currentType === 'fuel' && odo !== null && !isNaN(odo)){
+      var prev = prevOdoEntry(els.fDate.value || todayISO, odo, state.editingId);
+      if (prev){
+        var d = odo - prev.odometerKm;
+        if (d > 0){
+          els.fDistance.value = d;
+          auto = true;
+          odoComputed.textContent = '走行距離は前回(' + fmtDateShort(prev.date) + ' ' + num(prev.odometerKm,0) + ' km)との差から自動計算';
+        } else {
+          odoComputed.textContent = '前回(' + fmtDateShort(prev.date) + ' ' + num(prev.odometerKm,0) + ' km)以下の値です。確認してください';
+        }
+      } else {
+        odoComputed.textContent = '前回のメーターの記録がないため、走行距離は手入力してください';
+      }
+    }
+    els.fDistance.readOnly = auto;
+    recalcEffPreview();
+  }
+  fOdo.addEventListener('input', refreshOdo);
+  els.fDate.addEventListener('input', refreshOdo);
+  els.fDate.addEventListener('change', refreshOdo);
 
   function recalcAmount(){
     var liters = parseFloat(els.fLiters.value);
@@ -1063,7 +1117,7 @@
     els.fMaintAmount.readOnly = false;
     els.maintComputed.textContent = '';
     els.fCostAmount.value = '';
-    els.fCategory.value = COST_CATEGORIES[0];
+    els.fCategory.value = 'その他';
   }
 
   function openAdd(){
@@ -1077,6 +1131,9 @@
     els.fDate.value = todayISO;
     els.btnDelete.hidden = true;
     resetDeleteBtn();
+    state.showCat = false;
+    btnTypeMaint.hidden = true;
+    fOdo.value = ''; els.fDistance.readOnly = false; odoComputed.textContent = '';
     setType('fuel');
     els.ampComputed.textContent = '';
     els.fEffPreview.value = '';
@@ -1089,9 +1146,12 @@
     els.sheetTitle.textContent = '記録を編集';
     state.scanned = false;
     scanReset(false);
+    state.showCat = (e.type === 'cost' && !!e.category && e.category !== 'その他');
+    btnTypeMaint.hidden = (e.type !== 'maintenance');
     setType(e.type);
     els.fDate.value = e.date || todayISO;
     els.fDistance.value = (typeof e.distanceKm==='number') ? e.distanceKm : '';
+    fOdo.value = (typeof e.odometerKm==='number') ? e.odometerKm : '';
     els.fLiters.value = (typeof e.liters==='number') ? e.liters : '';
     els.fPrice.value = (typeof e.unitPrice==='number') ? e.unitPrice : '';
     els.fAmount.value = (typeof e.amount==='number') ? e.amount : '';
@@ -1108,10 +1168,10 @@
       if (COST_CATEGORIES.indexOf(e.category) < 0 && e.category){
         var o = document.createElement('option'); o.value = e.category; o.textContent = e.category; els.fCategory.appendChild(o);
       }
-      els.fCategory.value = e.category || COST_CATEGORIES[0];
+      els.fCategory.value = e.category || 'その他';
       els.fCostAmount.value = (typeof e.amount==='number') ? e.amount : '';
     }
-    recalcEffPreview();
+    refreshOdo();
     els.btnDelete.hidden = false;
     resetDeleteBtn();
     showSheet();
@@ -1128,6 +1188,8 @@
 
   /* ---------- 写真から入力 ---------- */
 
+  var btnTypeMaint = document.getElementById('btnTypeMaint');
+  var costCatField = document.getElementById('costCatField');
   var scanWrap = document.getElementById('scanWrap');
   var scanBtn = document.getElementById('btnScan');
   var scanInput = document.getElementById('scanInput');
@@ -1167,32 +1229,23 @@
   function numOrNull(v){ return (typeof v === 'number' && isFinite(v)) ? v : null; }
 
   function applyScan(r){
-    var type = (r.type === 'maintenance' || r.type === 'cost') ? r.type : 'fuel';
+    var type = (r.type === 'fuel') ? 'fuel' : 'cost';
     resetItems();
+    fOdo.value = ''; els.fDistance.readOnly = false; odoComputed.textContent = '';
     setType(type);
     if (typeof r.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.date)) els.fDate.value = r.date;
     els.fNote.value = (typeof r.note === 'string') ? r.note : '';
     if (type === 'fuel'){
+      var od = numOrNull(r.odometerKm);
+      fOdo.value = od !== null ? od : '';
+      refreshOdo();
       var l = numOrNull(r.liters), p = numOrNull(r.unitPrice), a = numOrNull(r.amount);
       els.fLiters.value = l !== null ? l : '';
       els.fPrice.value = p !== null ? p : '';
       els.fAmount.value = a !== null ? a : ((l !== null && p !== null) ? Math.round(l*p) : '');
       els.ampComputed.textContent = '';
       recalcEffPreview();
-    } else if (type === 'maintenance'){
-      var items = Array.isArray(r.items) ? r.items : [];
-      items.forEach(function(it){
-        if (!it) return;
-        addItemRow({ label: String(it.label || ''), amount: numOrNull(it.amount), group: it.group === 'legal' ? 'legal' : 'work' });
-      });
-      updateMaintTotal();
-      if (!items.some(function(it){ return it && numOrNull(it.amount) !== null; })){
-        var ma = numOrNull(r.amount);
-        els.fMaintAmount.value = ma !== null ? ma : '';
-      }
     } else {
-      var cat = (COST_CATEGORIES.indexOf(r.category) >= 0) ? r.category : 'その他';
-      els.fCategory.value = cat;
       var ca = numOrNull(r.amount);
       els.fCostAmount.value = ca !== null ? ca : '';
     }
@@ -1275,7 +1328,7 @@
     var distanceKm = els.fDistance.value !== '' ? parseFloat(els.fDistance.value) : null;
     var note = els.fNote.value.trim();
 
-    if (type === 'maintenance' && !note){
+    if ((type === 'maintenance' || type === 'cost') && !note){
       els.fNote.focus();
       return;
     }
@@ -1292,6 +1345,8 @@
       var liters = els.fLiters.value !== '' ? parseFloat(els.fLiters.value) : null;
       var price = els.fPrice.value !== '' ? parseFloat(els.fPrice.value) : null;
       var amount = els.fAmount.value !== '' ? parseFloat(els.fAmount.value) : null;
+      var odoV = fOdo.value !== '' ? parseFloat(fOdo.value) : null;
+      data.odometerKm = (typeof odoV==='number' && !isNaN(odoV)) ? odoV : null;
       data.liters = (typeof liters==='number' && !isNaN(liters)) ? liters : null;
       data.unitPrice = (typeof price==='number' && !isNaN(price)) ? price : null;
       data.amount = (typeof amount==='number' && !isNaN(amount)) ? amount : null;
@@ -1319,7 +1374,34 @@
 
   function newId(){ return 'e-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2,7); }
 
+  // メーター方式の起点は 2026/10/3(レシート写真のメーター 37,209km、走行距離 813km)。それ以前の記録はメーター不明のまま
+  // 試作版で一時的に入った計算値(下の表と一致するもの)だけを取り除く。ご自身で入れた値は触らない
+  var TEMP_ODOMETER = {
+    'seed-2': [36887, 36396], 'seed-3': [36361, 35870], 'seed-4': [35775, 35284], 'seed-5': [35200, 34709],
+    'seed-6': [34594, 34103], 'seed-7': [33877, 33386], 'seed-8': [32980, 32489], 'seed-9': [32153, 31662],
+    'seed-10': [31262, 30771]
+  };
+  function backfillOdo(list){
+    list.forEach(function(e){
+      if (e.type !== 'fuel') return;
+      var t = TEMP_ODOMETER[e.id];
+      if (t && typeof e.odometerKm === 'number' && t.indexOf(e.odometerKm) >= 0) delete e.odometerKm;
+      if (e.date === '2026-10-03' && e.distanceKm === 813 && typeof e.odometerKm !== 'number') e.odometerKm = 37209;
+    });
+  }
+  // メーターのある給油どうしは、走行距離 = 今回のメーター − 前回のメーター
+  function recomputeDistances(list){
+    var fuel = list.filter(function(e){ return e.type === 'fuel' && typeof e.odometerKm === 'number'; })
+      .sort(function(a,b){ return a.date < b.date ? -1 : a.date > b.date ? 1 : a.odometerKm - b.odometerKm; });
+    for (var i = 1; i < fuel.length; i++){
+      var d = fuel[i].odometerKm - fuel[i-1].odometerKm;
+      if (d > 0 && fuel[i].distanceKm !== d) fuel[i].distanceKm = d;
+    }
+  }
+
   function persist(){
+    backfillOdo(state.entries);
+    recomputeDistances(state.entries);
     try {
       localStorage.setItem(STORE_KEY, JSON.stringify({ version:1, entries: state.entries }));
       return true;
@@ -1335,7 +1417,7 @@
     if (raw){
       try {
         var obj = JSON.parse(raw);
-        if (obj && Array.isArray(obj.entries)) return obj.entries;
+        if (obj && Array.isArray(obj.entries)){ state.entries = obj.entries; persist(); return state.entries; }
       } catch(e){ console.log('parse failed', e); }
     }
     // 初回起動: 初期データ(Artifact版から移行した記録)を投入
@@ -1428,6 +1510,7 @@
           id: (typeof raw.id === 'string' && raw.id) ? raw.id : newId(),
           type: type, date: raw.date,
           distanceKm: cleanNum(raw.distanceKm),
+          odometerKm: (type === 'fuel') ? cleanNum(raw.odometerKm) : undefined,
           liters: cleanNum(raw.liters), unitPrice: cleanNum(raw.unitPrice), amount: cleanNum(raw.amount),
           note: typeof raw.note === 'string' ? raw.note : '',
           category: (type === 'cost' && typeof raw.category === 'string') ? raw.category : undefined,
